@@ -122,9 +122,19 @@ button:hover {
     color: #e74c3c;
 }
 
+.result-image {
+  max-width: 180px;
+  display: block;
+  margin: 10px auto 20px auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
 /* Responsive */
 @media screen and (max-width: 480px) {
     #resultList li {
         font-size: 0.9rem;
     }
 }
+
+
