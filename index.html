@@ -1,1 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test des Courants Communistes</title>
+<link rel="stylesheet" href="style.css">
+</head>
 
+<body>
+
+<div class="container">
+
+<h1>Trouve ta branche du communisme! </h1>
+
+<div id="startScreen">
+<p>
+Ce test idéologique analyse tes positions politiques afin d’estimer
+le courant communiste dont tu es le plus proche.
+
+Crée par Kashair
+</p>
+<button onclick="startTest()">Commencer le test</button>
+</div>
+
+<div id="quizScreen" class="hidden">
+<h2 id="question"></h2>
+<div id="answers"></div>
+<p id="progress"></p>
+</div>
+
+<div id="resultScreen" class="hidden">
+<h2>Résultat</h2>
+<h3 id="resultTitle"></h3>
+<p id="resultDescription"></p>
+<button onclick="restart()">Recommencer</button>
+</div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
