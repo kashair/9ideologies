@@ -42,6 +42,43 @@ h1{
     letter-spacing: -0.02em;
 }
 
+/* Lead headline that shrinks when quiz starts */
+#leadText{
+    margin:6px 0 14px 0;
+    font-size:1.32rem;
+    font-weight:600;
+    color:var(--text);
+    transition: transform 420ms cubic-bezier(.2,.9,.2,1), opacity 320ms ease, margin 300ms ease;
+    transform-origin: center top;
+}
+/* Shrink and move upward so it sits just under the brand title */
+#leadText.shrink{
+    transform: translateY(-18px) scale(0.72);
+    opacity:0.95;
+    margin-top:2px;
+}
+
+.brand{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    margin-bottom:16px;
+}
+.site-logo{
+    width:96px;
+    height:auto;
+    border-radius:10px;
+    box-shadow: 0 8px 20px rgba(2,6,23,0.6);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+}
+.brand h1{
+    margin:0;
+    font-size:1.6rem;
+    font-weight:800;
+    color:var(--text);
+}
+
 #startScreen p{
     color:var(--muted);
     line-height:1.5;
@@ -115,12 +152,41 @@ button:active{ transform: translateY(-1px); }
     *{ transition: none !important; animation: none !important }
 }
 
+/* Bottom-left footer (small credit + disclaimer) */
+.site-footer{
+    position:fixed;
+    left:16px;
+    bottom:16px;
+    z-index:999;
+    color:var(--muted);
+    font-size:0.88rem;
+    line-height:1.1;
+    text-align:left;
+    background: transparent;
+    padding:0;
+    border-radius:0;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+.site-footer .disclaimer{
+    margin-top:4px;
+    font-size:0.78rem;
+    color:var(--muted);
+    opacity:0.95;
+}
+
 /* Responsive */
 @media screen and (max-width:640px){
     .container{ padding:20px }
     h1{ font-size:1.4rem }
     .answer{ padding:12px }
     #resultList li{ padding:12px }
+    .site-logo{ width:72px }
+}
+
+@media screen and (max-width:420px){
+    .site-footer{ left:10px; bottom:10px; padding:6px 8px; font-size:0.78rem }
+    .site-footer .disclaimer{ font-size:0.72rem }
 }
 
 /* Small accessibility tweak for disabled back button */
