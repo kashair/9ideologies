@@ -2,8 +2,122 @@
 // SCORES IDEOLOGIQUES
 // =======================
 
-// Lazy audio - create on first interaction to avoid preloading
-var audio = null;
+// Sound manager: prefers files in /sounds but falls back to WebAudio synthesis
+const SoundManager = (function(){
+    let ctx = null;
+
+    function ensureCtx(){
+        if(!ctx){
+            try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx = null; }
+        }
+        return ctx;
+    }
+
+    // Try to play a file from /sounds/<name>.(mp3|ogg|wav) via fetch->blob->Audio
+    async function tryPlayFile(name){
+        const exts = ['mp3','ogg','wav'];
+        for(const ext of exts){
+            const url = `sounds/${name}.${ext}`;
+            try{
+                const r = await fetch(url, {method:'GET'});
+                if(!r.ok) continue;
+                const blob = await r.blob();
+                const audioUrl = URL.createObjectURL(blob);
+                const a = new Audio(audioUrl);
+                a.play().catch(()=>{});
+                // revoke after playing
+                setTimeout(()=>URL.revokeObjectURL(audioUrl), 3000);
+                return true;
+            }catch(e){ /* try next */ }
+        }
+        return false;
+    }
+
+    // Simple synthesized sounds using WebAudio
+    function synthClick(){
+        const c = ensureCtx(); if(!c) return;
+        const now = c.currentTime;
+
+        // Smooth sine transient with a gentle upward pitch sweep
+        const o = c.createOscillator();
+        const filter = c.createBiquadFilter();
+        const g = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(1300, now);
+        o.frequency.exponentialRampToValueAtTime(1800, now + 0.03);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(9000, now);
+        g.gain.setValueAtTime(0.0, now);
+        g.gain.linearRampToValueAtTime(0.08, now + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        o.connect(filter);
+        filter.connect(g);
+        g.connect(c.destination);
+        o.start(now); o.stop(now + 0.14);
+
+        // Subtle decaying noise transient to add modern texture
+        try{
+            const bufLen = Math.floor(c.sampleRate * 0.02); // ~20ms noise
+            const buffer = c.createBuffer(1, bufLen, c.sampleRate);
+            const data = buffer.getChannelData(0);
+            for(let i=0;i<bufLen;i++){
+                // decaying amplitude for a tight click
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-6 * (i / bufLen));
+            }
+            const noise = c.createBufferSource();
+            noise.buffer = buffer;
+            const ng = c.createGain();
+            ng.gain.setValueAtTime(0.02, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            noise.connect(ng); ng.connect(c.destination);
+            noise.start(now); noise.stop(now + 0.06);
+        }catch(e){ /* ignore if buffer creation fails */ }
+    }
+
+    function synthStart(){
+        const c = ensureCtx(); if(!c) return;
+        const now = c.currentTime;
+        const o = c.createOscillator(); const g = c.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(360, now);
+        o.frequency.exponentialRampToValueAtTime(880, now + 0.42);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.14, now + 0.06);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+        o.connect(g); g.connect(c.destination);
+        o.start(); o.stop(now + 0.92);
+    }
+
+    function synthEnd(){
+        const c = ensureCtx(); if(!c) return;
+        const now = c.currentTime;
+        const freqs = [660, 880, 1100];
+        freqs.forEach((f,i)=>{
+            const o = c.createOscillator(); const g = c.createGain();
+            o.type = 'sine'; o.frequency.setValueAtTime(f, now + i*0.02);
+            g.gain.setValueAtTime(0.0, now + i*0.02);
+            g.gain.linearRampToValueAtTime(0.12, now + 0.06 + i*0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+            o.connect(g); g.connect(c.destination);
+            o.start(now + i*0.02); o.stop(now + 1.12);
+        });
+    }
+
+    return {
+        play: function(name){
+            // try file first, then fallback synth
+            tryPlayFile(name).then(found=>{
+                if(found) return;
+                if(name === 'click') synthClick();
+                else if(name === 'start') synthStart();
+                else if(name === 'end') synthEnd();
+            }).catch(()=>{
+                if(name === 'click') synthClick();
+                else if(name === 'start') synthStart();
+                else if(name === 'end') synthEnd();
+            });
+        }
+    };
+})();
 
 const ideologies = {
     marxism: 0,
@@ -353,9 +467,20 @@ computeMaxScores();
 // =======================
 
 function startTest(){
-    document.getElementById("startScreen").classList.add("hidden");
-    document.getElementById("quizScreen").classList.remove("hidden");
-    showQuestion();
+    // Play start sound, animate the main lead headline to a smaller state, then reveal quiz
+    try{ SoundManager.play('start'); }catch(e){}
+    // Animate the main lead headline to a smaller state, then reveal quiz
+    const lead = document.getElementById('leadText');
+    if(lead){
+        // trigger shrink animation
+        lead.classList.add('shrink');
+    }
+    // Wait briefly so the user sees the animation, then show the quiz
+    setTimeout(() => {
+        document.getElementById("startScreen").classList.add("hidden");
+        document.getElementById("quizScreen").classList.remove("hidden");
+        showQuestion();
+    }, 260);
 }
 
 function showQuestion(){
@@ -404,15 +529,8 @@ function showQuestion(){
 }
 
 function selectAnswer(effect){
-    // play click audio on selection (create lazily to avoid preload)
-    try{
-        if(!audio){
-            audio = new Audio('clickaudio.mp3');
-            audio.preload = 'none';
-        }
-        audio.currentTime = 0;
-        audio.play();
-    }catch(e){}
+    // play click sound (file in /sounds preferred, else synthesized)
+    try{ SoundManager.play('click'); }catch(e){}
     // Sauvegarde de l'effet choisi pour pouvoir annuler si nécessaire
     answerHistory.push(effect);
     for (let key in effect){
@@ -431,6 +549,8 @@ function selectAnswer(effect){
 // =======================
 
 function showResult(){
+
+    try{ SoundManager.play('end'); }catch(e){}
 
     document.getElementById("quizScreen").classList.add("hidden");
     document.getElementById("resultScreen").classList.remove("hidden");
